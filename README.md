@@ -16,6 +16,7 @@ A comprehensive Python-based YouTube downloader that supports both video and aud
 1. Clone or download this repository
 2. Install required dependencies:
    ```bash
+   venv -m youtube-dl
    pip install -r requirements.txt
    or (recommended)
    make sure uv is installed:
@@ -25,7 +26,6 @@ A comprehensive Python-based YouTube downloader that supports both video and aud
    Install FFmpeg:
 
     Windows:
-
         Download from https://ffmpeg.org/download.html
 
         Extract and add the bin folder to your system PATH
