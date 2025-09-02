@@ -1,0 +1,10 @@
+[project]
+name = "youtube-dl"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pathvalidate>=3.2.0",
+    "yt-dlp>=2023.11.16",
+]
