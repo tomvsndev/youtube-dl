@@ -247,9 +247,10 @@ def batch_download():
     print("\n📹 Select download format:")
     print("1. Best video with audio")
     print("2. Best audio only (MP3)")
-    print("3. Custom format (will prompt for each video)")
+    print("3. Best audio only (WAV)")
+    print("4. Custom format (will prompt for each video)")
 
-    format_choice = input("Enter choice (1-3, press Enter for best video): ").strip()
+    format_choice = input("Enter choice (1-4, press Enter for best video): ").strip()
 
     successful_downloads = []
 
@@ -257,9 +258,12 @@ def batch_download():
         print(f"\n🔽 Downloading {i}/{len(urls)}: {url}")
 
         if format_choice == "2":
-            # Audio only
-            result = download_audio_only(url, output_dir)
+            # Audio only MP3
+            result = download_audio_only(url, output_dir, 'mp3')
         elif format_choice == "3":
+            # Audio only WAV
+            result = download_audio_only(url, output_dir, 'wav')
+        elif format_choice == "4":
             # Custom format for each
             result = download_youtube_media_url(url, output_dir)
         else:
@@ -273,8 +277,8 @@ def batch_download():
     return successful_downloads
 
 
-def download_audio_only(url, output_dir="downloads"):
-    """Download audio only as MP3"""
+def download_audio_only(url, output_dir="downloads", format='mp3'):
+    """Download audio only as MP3 or WAV"""
     ffmpeg_path, ffprobe_path = check_ffmpeg_installed()
     if not ffmpeg_path or not ffprobe_path:
         return None
@@ -287,8 +291,7 @@ def download_audio_only(url, output_dir="downloads"):
         'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
+            'preferredcodec': format,
         }],
         'ffmpeg_location': ffmpeg_dir,
         'quiet': False,
@@ -298,7 +301,7 @@ def download_audio_only(url, output_dir="downloads"):
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            filename = os.path.splitext(ydl.prepare_filename(info))[0] + '.mp3'
+            filename = os.path.splitext(ydl.prepare_filename(info))[0] + f'.{format}'
             print(f"✅ Downloaded: {filename}")
             return filename
     except Exception as e:
@@ -375,12 +378,29 @@ def download_youtube_media_url(url, output_dir="downloads"):
 
     # If it's an audio format, add postprocessing options
     if selected_format.get('vcodec') == 'none':
-        ydl_opts['postprocessors'] = [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }]
-        ext = 'mp3'
+        # Ask for audio format preference
+        print("\n🎵 Audio format options:")
+        print("1. MP3 (most compatible)")
+        print("2. WAV (lossless, large file)")
+        print("3. Keep original format")
+
+        audio_choice = input("Select audio format (1-3, press Enter for MP3): ").strip()
+        if audio_choice == "2":
+            ydl_opts['postprocessors'] = [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'wav',
+            }]
+            ext = 'wav'
+        elif audio_choice == "3":
+            # Keep original format
+            pass
+        else:  # Default to MP3
+            ydl_opts['postprocessors'] = [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }]
+            ext = 'mp3'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -397,6 +417,47 @@ def download_youtube_media_url(url, output_dir="downloads"):
         return None
 
 
+def download_wav_audio():
+    """Direct function to download audio as WAV"""
+    ffmpeg_path, ffprobe_path = check_ffmpeg_installed()
+    if not ffmpeg_path or not ffprobe_path:
+        return None
+
+    url = input("Enter YouTube URL: ").strip()
+    if not url:
+        print("❌ Please enter a URL")
+        return None
+
+    output_dir = input("📁 Enter output directory (press Enter for 'downloads'): ").strip()
+    output_dir = output_dir if output_dir else "downloads"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Get the directory containing ffmpeg
+    ffmpeg_dir = os.path.dirname(ffmpeg_path)
+
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'wav',
+        }],
+        'ffmpeg_location': ffmpeg_dir,
+        'quiet': False,
+        'no_warnings': False,
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = os.path.splitext(ydl.prepare_filename(info))[0] + '.wav'
+            print(f"✅ Downloaded WAV: {filename}")
+            return filename
+    except Exception as e:
+        print(f"❌ Error downloading WAV audio: {e}")
+        return None
+
+
 if __name__ == "__main__":
     print("YouTube Media Downloader")
     print("=" * 50)
@@ -407,9 +468,10 @@ if __name__ == "__main__":
         print("2. Batch download from file")
         print("3. Download best video quality")
         print("4. Download audio only (MP3)")
-        print("5. Exit")
+        print("5. Download audio only (WAV)")
+        print("6. Exit")
 
-        choice = input("Enter choice (1-5): ").strip()
+        choice = input("Enter choice (1-6): ").strip()
 
         if choice == "1":
             result = download_youtube_media()
@@ -420,8 +482,10 @@ if __name__ == "__main__":
             result = download_best_video(url)
         elif choice == "4":
             url = input("Enter YouTube URL: ").strip()
-            result = download_audio_only(url)
+            result = download_audio_only(url, format='mp3')
         elif choice == "5":
+            result = download_wav_audio()
+        elif choice == "6":
             print("👋 Goodbye!")
             break
         else:
